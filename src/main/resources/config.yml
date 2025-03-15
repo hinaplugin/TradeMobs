@@ -1,0 +1,4 @@
+mobs:
+  zombie:
+    - emerald%1-iron_ingot%1
+    - emerald%1&diamond%1-tnt%1

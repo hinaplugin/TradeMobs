@@ -1,0 +1,16 @@
+name: TradeMobs
+version: '1.0.0'
+main: com.hinaplugin.tradeMobs.TradeMobs
+api-version: '1.20'
+authors: [ hina2113 ]
+description: 指定したMobが交易をする
+
+commands:
+  trademobs:
+    permission: trademobs.commands
+
+permissions:
+  trademobs.trade:
+    default: true
+  trademobs.commands:
+    default: op
