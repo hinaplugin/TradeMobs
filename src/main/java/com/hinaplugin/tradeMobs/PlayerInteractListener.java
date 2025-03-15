@@ -2,6 +2,7 @@ package com.hinaplugin.tradeMobs;
 
 import com.google.common.collect.Lists;
 import net.kyori.adventure.text.Component;
+import org.apache.commons.lang3.EnumUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,6 +13,9 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Merchant;
 import org.bukkit.inventory.MerchantRecipe;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 
 import java.util.List;
 import java.util.Locale;
@@ -63,6 +67,7 @@ public class PlayerInteractListener implements Listener {
         }
 
         // 交易のメイン情報
+
         final Merchant merchant = Bukkit.createMerchant(Component.text(entity.getType().toString()));
 
         // 交易のレシピリスト
@@ -88,19 +93,53 @@ public class PlayerInteractListener implements Listener {
             // 受け取るアイテムの情報処理
             final String[] buyItem = trades[1].split("%");
 
-            // 受け取るアイテムの種類
-            final Material buyItemMaterial = Material.getMaterial(buyItem[0].toUpperCase(Locale.ROOT));
+            MerchantRecipe recipe;
 
-            // 受け取るアイテムの個数
-            final int buyItemAmount = buyItem[1].chars().allMatch(Character::isDigit) ? Integer.parseInt(buyItem[1]) : 1;
+            if (buyItem[0].contains("$")){
+                // 受け取るアイテム情報を分割
+                final String[] potions = buyItem[0].split("\\$");
 
-            // 受け取るアイテムの種類が存在しなければ処理終了
-            if (buyItemMaterial == null){
-                return;
+                // ポーションのフォーマットが不正な値の場合スキップ
+                if (potions.length != 3){
+                    continue;
+                }
+
+                // ポーションの効果
+                final PotionEffectType potionEffectType = PotionEffectType.getByName(potions[1].toUpperCase(Locale.ROOT));
+
+                // ポーションのタイプ
+                final Material material = potions[2].chars().allMatch(Character::isDigit) ? potions[2].equalsIgnoreCase("1") ? Material.POTION : potions[2].equalsIgnoreCase("2") ? Material.SPLASH_POTION : potions[2].equalsIgnoreCase("3") ? Material.LINGERING_POTION : Material.POTION : Material.POTION;
+
+                // ポーションの効果が存在しなければスキップ
+                if (potionEffectType == null){
+                    continue;
+                }
+
+                // ポーションの効果
+                final ItemStack itemStack = this.getItemStack(material, potions[1]);
+
+                // ポーション効果が存在しなければスキップ
+                if (itemStack == null){
+                    continue;
+                }
+
+                // 交易情報に受け取るアイテムを登録
+                recipe = new MerchantRecipe(itemStack, Integer.MAX_VALUE);
+            }else {
+                // 受け取るアイテムの種類
+                final Material buyItemMaterial = Material.getMaterial(buyItem[0].toUpperCase(Locale.ROOT));
+
+                // 受け取るアイテムの個数
+                final int buyItemAmount = buyItem[1].chars().allMatch(Character::isDigit) ? Integer.parseInt(buyItem[1]) : 1;
+
+                // 受け取るアイテムの種類が存在しなければ処理終了
+                if (buyItemMaterial == null){
+                    return;
+                }
+
+                // 交易情報に受け取るアイテムを登録
+                recipe = new MerchantRecipe(new ItemStack(buyItemMaterial, buyItemAmount), Integer.MAX_VALUE);
             }
-
-            // 交易情報に受け取るアイテムを登録
-            final MerchantRecipe recipe = new MerchantRecipe(new ItemStack(buyItemMaterial, buyItemAmount), Integer.MAX_VALUE);
 
             if (sellItems.length == 1){
                 // 渡すアイテムが1種類の場合
@@ -163,5 +202,25 @@ public class PlayerInteractListener implements Listener {
 
         // 右クリックしたプレイヤーに交易画面を表示
         player.openMerchant(merchant, true);
+    }
+
+    private ItemStack getItemStack(Material material, String potionEffectType) {
+        // ポーションのアイテム情報
+        final ItemStack itemStack = new ItemStack(material, 1);
+
+        // ポーションの詳細情報
+        final PotionMeta potionMeta = (PotionMeta) itemStack.getItemMeta();
+
+        // ベース効果を取得
+        if (!EnumUtils.isValidEnum(PotionType.class, potionEffectType.toUpperCase(Locale.ROOT))){
+            return null;
+        }
+
+        // ポーションのベースを設定
+        potionMeta.setBasePotionType(PotionType.valueOf(potionEffectType.toUpperCase(Locale.ROOT)));
+
+        // ポーション効果をポーションアイテムに設定
+        itemStack.setItemMeta(potionMeta);
+        return itemStack;
     }
 }
